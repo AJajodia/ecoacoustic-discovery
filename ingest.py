@@ -210,9 +210,9 @@ indexes = np.lexsort((coords[:, 0], -coords[:, 1]))
 
 images = np.array(data['path'])[indexes]
 
-paths = []
+df_list = []
 
-for item in images:
+for item, coord in zip(images, coords):
     
     plt.figure(2,2)
     
@@ -233,17 +233,20 @@ for item in images:
     
     filename = os.path.splitext(os.path.basename(item))[0]
     
-    paths.append(filename)
+    df_list.append({
+        'filename': filename,
+        'path': item,
+        'x': coord[0],
+        'y': coord[1]
+    })
     
-    plt.savefig('images/' + filename + '.png', transparent=True)
+    
+    plt.savefig('images/' + filename + '.png', bbox_inches='tight')
     
     plt.close()
 
 
-x = [coord[0] for coord in coords]
-y = [coord[1] for coord in coords]
-
-df = pd.DataFrame({'name':paths, 'x': x, 'y': y})
+df = pd.DataFrame(df_list)
 
 df.to_csv(os.getcwd() + '/images/muha_data.csv', index=False)
 
