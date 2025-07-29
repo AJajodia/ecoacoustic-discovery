@@ -6,5 +6,15 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "ipykernel>=6.30.0",
+    "lap",
+    "librosa>=0.11.0",
+    "matplotlib>=3.10.3",
     "pandas>=2.3.1",
+    "pyha-analyzer",
+    "seaborn>=0.13.2",
+    "tqdm>=4.67.1",
 ]
+
+[tool.uv.sources]
+pyha-analyzer = { git = "https://github.com/UCSD-E4E/pyha-analyzer-2.0.git" }
+lap = { git = "https://github.com/gatagat/lap.git" }

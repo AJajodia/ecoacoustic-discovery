@@ -1,69 +1,29 @@
 
 # imports
-import librosa, os
-from scipy.linalg import svd, toeplitz
-from scipy.stats import zscore
-import numpy as np
-from scipy.stats import entropy
-from statsmodels.tsa.stattools import acf
+import librosa
 
-from tqdm.notebook import tqdm
+from tqdm import tqdm
+
 from random import sample
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
-from sklearn import svm, neighbors, model_selection, manifold
-from statistics import mean
-from sklearn.metrics import classification_report
-from skimage.measure import block_reduce
+from sklearn import manifold
 
-import tensorflow_hub as hub
-import tensorflow as tf
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.colors import Normalize
 
 import lap
 
-from pyha_analyzer import PyhaTrainer, PyhaTrainingArguments, extractors
-from pyha_analyzer.models.demo_CNN import ResnetConfig, ResnetModel
-from pyha_analyzer.preprocessors import MelSpectrogramPreprocessors
-from pyha_analyzer.models import EfficentNet
+from pyha_analyzer import extractors
+
+import numpy as np
+
+import os
 
 
-import torch
-
-
-
-
-
-
-lag = 512
-
-# juan colonna entropy
-
-def Entropy(p1):
-    p1 = p1/np.sum(p1)
-    return entropy(p1)/np.log(len(p1))
-# EGCI calculation from https://github.com/juancolonna/EGCI/blob/master/Example_of_EGCI_calculation.ipynb
-
-def JSD(p):
-    n = len(p)
-    q = np.ones(n)/n # Uniform reference
-    p = np.asarray(p)
-    q = np.asarray(q)
-    p = p/p.sum() # normalize
-    m = (p + q) / 2
-    jensen0 = -2*((((n+1)/n)*np.log(n+1)-2*np.log(2*n) + np.log(n))**(-1))
-    return jensen0*(entropy(p, m) + entropy(q, m)) / 2
-
-def EGCI(x):
-    x = zscore(x)
-    
-    # Algorithm steps 
-    rxx = acf(x, nlags=lag, adjusted=True, fft=True) #https://github.com/blue-yonder/tsfresh/issues/902
-    Sxx = toeplitz(rxx)
-    U, s, Vt = np.linalg.svd(Sxx) #svd(Sxx)
-    
-    return Entropy(s), Entropy(s)*JSD(s) 
 
 def process_data(data):
     path = data["filepath"]
@@ -79,7 +39,7 @@ def process_data(data):
     if librosa.get_duration(y = audio, sr = sr) == 0:
         return None
     
-    h, c = EGCI(audio)
+    # h, c = EGCI(audio)
 
     
     
@@ -89,8 +49,8 @@ def process_data(data):
             "sr": sr,
             "gt": data['labels'],
             "site": data['labels'],
-            "entropy": h,
-            "complexity": c
+            # "entropy": h,
+            # "complexity": c
         }
     return output_data
 
@@ -103,6 +63,8 @@ music_ads = music_extractor("/home/a.jajodia.229/acoustic/local_data/muha/Liked 
 
 df = music_ads['train'].to_pandas()
 
+
+print(df)
 
 sum(df['filepath'].str.contains('SERRA'))
 
@@ -127,18 +89,7 @@ metadata = pd.read_csv('/home/a.jajodia.229/acoustic/local_data/muha/Liked Sound
 
 metadata.rename(columns={'FileName': 'filepath'}, inplace=True)
 
-
 data = pd.DataFrame(data)
-
-
-data['time'] = data['path'].str.split('_').apply(lambda x: ('Night' if ((int(x[5]) > 180000) or (int(x[5]) < 60000)) else 'Day') if (len(x) == 8) else pd.NA)
-
-
-sns.scatterplot(data, x = 'entropy', y = 'complexity', hue = 'time')
-
-
-
-
 
 sr = 96000
 max_length = sr*4 # ignore samples longer than 4 seconds
@@ -146,7 +97,7 @@ fixed_length = sr/4 # trim all samples to 250 milliseconds
 limit = None # set this to 100 to only load the first 100 samples
 
 
-def load_sample(fn, sr=None,
+def load_sample(fn, 
                 max_length=None, fixed_length=None, normalize=True):
     if fn == '': # ignore empty filenames
         return None
@@ -228,9 +179,7 @@ cost = cdist(grid, data2d, 'sqeuclidean')
 cost = cost * (10000000. / cost.max())
 
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from matplotlib.colors import Normalize
+
 
 cmap = cm.viridis
 norm = Normalize(vmin=0, vmax=3) # Adjust vmin/vmax based on your data range
@@ -247,16 +196,7 @@ for index, (start, end) in enumerate(zip(data2d, grid_jv)):
 plt.show()
 
 
-data_trimmed = [i[:,:,0:1876] for i in data['audio']]
-
-
-
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-
 from mpl_toolkits.axes_grid1 import ImageGrid
-from tqdm import tqdm_notebook
 
 
 fig = plt.figure(figsize=(16., 16.))
@@ -265,31 +205,47 @@ fig = plt.figure(figsize=(16., 16.))
 
 coords = (grid_jv*9).astype(int)
 
-grid = ImageGrid(fig, 111,  # similar to subplot(111)
-                 nrows_ncols=(10, 10),
-                 axes_pad=0,  # pad between Axes in inch.
-                 )
 
 indexes = np.lexsort((coords[:, 0], -coords[:, 1]))
 
 images = np.array(data['path'])[indexes]
 
-for ax, item in tqdm_notebook(zip(grid, images)):
+paths = []
+
+for item in images:
     
-    y, sr = librosa.load(item, sr = None)
-    im = librosa.feature.melspectrogram(y=y, sr=sr)
-
-    im = librosa.power_to_db(im, ref=np.max)
+    plt.figure(2,2)
     
-    im = im[:,0:256]
+    y, sr = librosa.load(item) # Replace with your audio file path
+    S = librosa.feature.melspectrogram(y=y, sr=sr)
     
-    ax.imshow(im)
+    fig, ax = plt.subplots()
+    
+    S_db = librosa.power_to_db(S, ref=np.max)
 
 
-data['x'] = [coord[0] for coord in coords]
-data['y'] = [coord[1] for coord in coords]
+    # Display the Mel spectrogram without any markers
+    # The 'x_axis' and 'y_axis' arguments only control the labels and scaling, not markers.
+    librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='mel', ax=ax)
 
-data.to_csv('/Users/anu/Documents/e4e/ecoacoustic-discovery/images/muha_data.csv', index=False)
+    
+    ax.set_axis_off()
+    
+    filename = os.path.splitext(os.path.basename(item))[0]
+    
+    paths.append(filename)
+    
+    plt.savefig('images/' + filename + '.png', transparent=True)
+    
+    plt.close()
+
+
+x = [coord[0] for coord in coords]
+y = [coord[1] for coord in coords]
+
+df = pd.DataFrame({'name':paths, 'x': x, 'y': y})
+
+df.to_csv(os.getcwd() + '/images/muha_data.csv', index=False)
 
 
 
