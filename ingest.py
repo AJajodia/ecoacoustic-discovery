@@ -208,11 +208,11 @@ coords = (grid_jv*9).astype(int)
 
 indexes = np.lexsort((coords[:, 0], -coords[:, 1]))
 
-images = np.array(data['path'])[indexes]
+images = np.array(data['path'][0:100])[indexes]
 
 df_list = []
 
-for i, item in enumerate(images):
+for item, coord in zip(images, coords):
     
     plt.figure(2,2)
     
@@ -236,8 +236,8 @@ for i, item in enumerate(images):
     df_list.append({
         'filename': filename,
         'path': 'images/' + filename + '.png',
-        'y': row_assigns[i],
-        'x': col_assigns[i]
+        'x': coord[0],
+        'y': coord[1]
     })
     
     
