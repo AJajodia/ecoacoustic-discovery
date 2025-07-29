@@ -212,7 +212,7 @@ images = np.array(data['path'])[indexes]
 
 df_list = []
 
-for item, coord in zip(images, coords):
+for i, item in enumerate(images):
     
     plt.figure(2,2)
     
@@ -236,8 +236,8 @@ for item, coord in zip(images, coords):
     df_list.append({
         'filename': filename,
         'path': 'images/' + filename + '.png',
-        'x': row_assigns[0],
-        'y': col_assigns[1]
+        'y': row_assigns[i],
+        'x': col_assigns[i]
     })
     
     
