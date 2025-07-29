@@ -235,7 +235,7 @@ for item, coord in zip(images, coords):
     
     df_list.append({
         'filename': filename,
-        'path': item,
+        'path': 'images/' + filename,
         'x': coord[0],
         'y': coord[1]
     })
