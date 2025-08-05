@@ -1,0 +1,14 @@
+{
+  "name": "acb23db36e2102f5",
+  "main": "acb23db36e2102f5@159.js",
+  "version": "159.0.0",
+  "homepage": "https://observablehq.com/d/acb23db36e2102f5",
+  "author": {
+    "name": "E4E",
+    "url": "https://observablehq.com/@e4e"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}

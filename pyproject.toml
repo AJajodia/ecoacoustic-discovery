@@ -3,7 +3,6 @@ name = "ecoacoustic-discovery"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
 dependencies = [
     "ipykernel>=6.30.0",
     "lap",
@@ -12,7 +11,12 @@ dependencies = [
     "pandas>=2.3.1",
     "pyha-analyzer",
     "seaborn>=0.13.2",
+    "torchcodec>=0.5",
     "tqdm>=4.67.1",
+    "datasets<4.0.0",
+    "bioacoustics-model-zoo>=0.12.0",
+    "tf-keras>=2.19.0",
+    "statsmodels>=0.14.5",
 ]
 
 [tool.uv.sources]
