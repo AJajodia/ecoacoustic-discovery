@@ -17,6 +17,26 @@ function _chart(d3,data,invalidation)
   const links = data.links.map(d => ({...d}));
   const nodes = data.nodes.map(d => ({...d}));
 
+  //store # of edges for each node so that you dynamically change node size
+  const degreeMap = new Map();
+  nodes.forEach(d => degreeMap.set(d.id, 0)); //initialize to 0
+  // Count connections
+  links.forEach(link => {
+    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+    const targetId = typeof link.target === "object" ? link.target.id : link.target;
+
+    degreeMap.set(sourceId, degreeMap.get(sourceId) + 1);
+    degreeMap.set(targetId, degreeMap.get(targetId) + 1);
+  });
+  const radiusScale = d3.scaleLinear()
+    .domain(d3.extent(nodes, d => degreeMap.get(d.id)))  // [minDegree, maxDegree]
+    .range([6, 20]);  // adjust size range of nodes. rn, 6 is smallest and 20 is largest
+  const fontSizeScale = d3.scaleLinear()
+    .domain(d3.extent(nodes, d => degreeMap.get(d.id))) // [minDegree, maxDegree]
+    .range([8, 16]);  // you can tweak this range as desired
+
+
+
   // Create a simulation with several forces.
   const simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id(d => d.id))
@@ -28,8 +48,11 @@ function _chart(d3,data,invalidation)
   const svg = d3.create("svg")
       .attr("width", width)
       .attr("height", height)
+      // .attr("viewBox", [-width / 2, -height / 2, width, height])
+      // .attr("style", "max-width: 100%; height: auto; font: 20px sans-serif;");
       .attr("viewBox", [-width / 2, -height / 2, width, height])
-      .attr("style", "max-width: 100%; height: auto; font: 20px sans-serif;");
+      .attr("style", "height: auto; max-width: 100%;")
+
 
   // Add a line for each link, and a circle for each node.
   const link = svg.append("g")
@@ -46,8 +69,12 @@ function _chart(d3,data,invalidation)
     .selectAll("circle")
     .data(nodes)
     .join("circle")
-      .attr("r", 10)
-      .attr("fill", d => color(d.group));
+      //.attr("r", 10)
+      .attr("r", d => radiusScale(degreeMap.get(d.id)))
+      .attr("fill", d => color(d.group))
+    .on("mouseover", hoverNode)
+    .on("mouseout", endHover)
+    .on("click", listAllConnections);
 
   node.append("title")
       .text(d => d.id);
@@ -59,15 +86,29 @@ function _chart(d3,data,invalidation)
     .enter().append("text")
       .attr("dx", 10)
       .attr("dy", ".35em")
-	   .attr("style", "font-size: 10;")
+	   //.attr("style", "font-size: 10;")
+     .attr("font-size", d => fontSizeScale(degreeMap.get(d.id)) + "px")
       .text(function(d) { return d.id });
   
 
   // Add a drag behavior.
   node.call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended));
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended));
+  
+  
+   // Create a map from node ID to its neighbors
+  const neighborMap = new Map();
+  nodes.forEach(node => neighborMap.set(node.id, new Set()));
+  //console.log("neighborMap is ", neighborMap)
+  links.forEach(link => {
+    neighborMap.get(link.source.id || link.source).add(link.target.id || link.target);
+    neighborMap.get(link.target.id || link.target).add(link.source.id || link.source);
+  });
+  //console.log("links are ", links)
+
+
   
   // Set the position attributes of links and nodes each time the simulation ticks.
   simulation.on("tick", () => {
@@ -99,6 +140,96 @@ function _chart(d3,data,invalidation)
     event.subject.fy = event.y;
   }
 
+  function hoverNode(d){
+    //console.log("Hovering", d)
+    // Get neighbors of this node
+    const neighbors = neighborMap.get(d.id);
+    //console.log("neighbors are ", neighbors)
+    node
+    .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2) //keep node and its neighbors hella opaque and fade out teh other ndoes
+    //.attr("r", n => neighbors.has(n.id) ? 14 : 10); //increase size of neighbors to 14
+    
+    labels
+    .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2);
+
+    // d3.select(this)
+    //   .attr("r", 16)
+    
+    // Highlight connected links
+    link
+      // .attr("stroke", l =>
+      //   (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? "#f00" : "#999")
+      .attr("stroke-width", l =>
+        (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 2.5 : 1)
+      .attr("stroke-opacity", l =>
+        (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.1);
+    
+  }
+
+  function endHover(){
+    //return size and opacity of all nodes and links to the original
+    node
+      //.attr("r", 10)
+      .attr("opacity", 1);
+    link
+      .attr("stroke", "#999")
+      .attr("stroke-width", 1)
+      .attr("stroke-opacity", 1);
+    labels
+      .attr("opacity", 1);
+  }
+
+  function listAllConnections(d){
+    // const nodeId = d.id;
+    // const neighbors = neighborMap.get(nodeId);
+    // if (!neighbors) {
+    //   console.log(`Node "${nodeId}" has no connections.`);
+    //   return;
+    // }
+    // // Convert Set to array and print
+    // //console.log(`Neighbors of ${nodeId}:`, Array.from(neighbors));
+    // console.log(`Neighbors of ${d.id}:`);
+    // Array.from(neighbors).forEach(nId => {
+    //   const neighborNode = nodes.find(n => n.id === nId);
+    //   if (neighborNode) {
+    //     const group = neighborNode.group;
+    //     const nodeColor = color(group);
+    //     console.log(`%c${nId}`, `color: ${nodeColor}; font-weight: bold`);
+    //   } else {
+    //     console.log(nId);  // fallback if not found
+    //   }
+    // })
+
+    const nodeId = d.id;
+    const neighbors = neighborMap.get(nodeId);
+    const sidebar = document.getElementById("sidebar");
+
+    // Clear the sidebar
+    sidebar.innerHTML = `<h3>${nodeId}</h3>`;
+
+    if (!neighbors || neighbors.size === 0) {
+      sidebar.innerHTML += `<p><em>No neighbors</em></p>`;
+      return;
+    }
+
+    // Add a list of neighbors
+    const ul = document.createElement("ul");
+    Array.from(neighbors).forEach(nId => {
+      const neighborNode = nodes.find(n => n.id === nId);
+      const group = neighborNode?.group ?? 0;
+      const colorStr = color(group);
+
+      const li = document.createElement("li");
+      li.textContent = nId;
+      li.style.color = colorStr;
+      li.style.fontWeight = "bold";
+
+      ul.appendChild(li);
+    });
+    console.log(ul)
+    sidebar.appendChild(ul);
+  }
+
   // Restore the target alpha so the simulation cools after dragging ends.
   // Unfix the subject position now that it’s no longer being dragged.
   function dragended(event) {
@@ -112,7 +243,14 @@ function _chart(d3,data,invalidation)
   // stop naturally, but it’s a good practice.)
   invalidation.then(() => simulation.stop());
 
-  return svg.node();
+  //return svg.node();
+  try {
+    return svg.node();
+  } catch (err) {
+    console.error("Chart rendering failed:", err);
+    throw err;
+  }
+
 }
 
 
