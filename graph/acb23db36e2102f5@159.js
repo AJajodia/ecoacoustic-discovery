@@ -14,8 +14,18 @@ function _chart(d3,data,invalidation)
 
   // The force simulation mutates links and nodes, so create a copy
   // so that re-evaluating this cell produces the same result.
-  const links = data.links.map(d => ({...d}));
+  //const existingLinks = data.links.map(d => ({...d}));
+  //const links = data.links.map()
   const nodes = data.nodes.map(d => ({...d}));
+
+  const predictedLinks = [
+    { source: "SERRA_20250503_174806.wav", target: "Blips Sparse", value: 1, predicted: true, confidence: 0.9014 },
+    { source: "SERRA_20250503_175042.wav", target: "Blips Sparse", value: 1, predicted: true, confidence: 0.9008 },
+    //{ source: "Bat", target: "4PM - 11:59PM", value: 1, predicted: true, confidence: 0.2450 }
+  ];
+
+  const links = [...data.links.map(d => ({ ...d })), ...predictedLinks];
+
 
   //store # of edges for each node so that you dynamically change node size
   const degreeMap = new Map();
@@ -24,7 +34,6 @@ function _chart(d3,data,invalidation)
   links.forEach(link => {
     const sourceId = typeof link.source === "object" ? link.source.id : link.source;
     const targetId = typeof link.target === "object" ? link.target.id : link.target;
-
     degreeMap.set(sourceId, degreeMap.get(sourceId) + 1);
     degreeMap.set(targetId, degreeMap.get(targetId) + 1);
   });
@@ -40,6 +49,7 @@ function _chart(d3,data,invalidation)
   // Create a simulation with several forces.
   const simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id(d => d.id))
+      //.force("linkLabels", d3.forceLink(predictedLinks).id(d => d.id))
       .force("charge", d3.forceManyBody().strength(-1000))
       .force("x", d3.forceX())
       .force("y", d3.forceY());
@@ -48,20 +58,20 @@ function _chart(d3,data,invalidation)
   const svg = d3.create("svg")
       .attr("width", width)
       .attr("height", height)
-      // .attr("viewBox", [-width / 2, -height / 2, width, height])
-      // .attr("style", "max-width: 100%; height: auto; font: 20px sans-serif;");
       .attr("viewBox", [-width / 2, -height / 2, width, height])
       .attr("style", "height: auto; max-width: 100%;")
 
 
   // Add a line for each link, and a circle for each node.
   const link = svg.append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
+    //.attr("stroke", "#999") //to apply same color to entire group
+    .attr("stroke-opacity", 0.6)
     .selectAll("line")
     .data(links)
-    .join("line")
-      .attr("stroke-width", d => Math.sqrt(d.value));
+    .join("line") //traits for individual links
+      .attr("stroke", d => d.predicted === true ? "#0da87fff" : "#999")
+      .attr("stroke-width", d => Math.sqrt(d.value))
+      .attr("stroke-dasharray", d => ( d.predicted === true) ? "4,4" : "0") //if it is predicted edge, make it dashed. otherwise, it is solid
 
   const node = svg.append("g")
       .attr("stroke", "#fff")
@@ -75,6 +85,15 @@ function _chart(d3,data,invalidation)
     .on("mouseover", hoverNode)
     .on("mouseout", endHover)
     .on("click", listAllConnections);
+  
+  const linkLabels = svg.append("g")
+    .selectAll("text")
+    .data(links.filter(d => typeof d.confidence !== "undefined"))
+    .join("text")
+      .attr("font-size", "12px")
+      .attr("fill", "#0da87fff")
+      .text(d => d.confidence.toFixed(2));
+
 
   node.append("title")
       .text(d => d.id);
@@ -89,6 +108,64 @@ function _chart(d3,data,invalidation)
 	   //.attr("style", "font-size: 10;")
      .attr("font-size", d => fontSizeScale(degreeMap.get(d.id)) + "px")
       .text(function(d) { return d.id });
+
+
+  
+  // Create a legend group in the top-left corner
+  const legend = svg.append("g")
+    .attr("transform", `translate(${width / 2 - 150}, ${-height / 2 + 20})`); 
+
+  const uniqueGroups = Array.from(new Set(nodes.map(d => d.group)));
+  let activeGroups = new Set(uniqueGroups); //initially, all groups are active/enabled
+  console.log("activeGroups are ", activeGroups)
+
+  function updateVisibility() {
+    // show/hide nodes & labels based on group
+    console.log("activeGroups are ", activeGroups)
+    node.style("display", n => activeGroups.has(n.group) ? null : "none");
+    labels.style("display", n => activeGroups.has(n.group) ? null : "none");
+    link.style("display", l =>
+      (activeGroups.has(l.source.group) && activeGroups.has(l.target.group)) ? null : "none"
+    );
+    // hide confidence labels too if any of its endpoints are hidden
+    if (linkLabels) {
+      linkLabels.style("display", l =>
+        (activeGroups.has(l.source.group) && activeGroups.has(l.target.group)) ? null : "none"
+      );
+    }
+  }
+
+  const legendItems = legend.selectAll("legend-item")
+    .data(uniqueGroups)
+    .enter()
+    .append("g")
+    .attr("class", "legend-item")
+    .attr("transform", (d, i) => `translate(0, ${i * 20})`) // vertical spacing
+    .style("cursor", "pointer")
+    .on("click", function(event, d) {
+      // Toggle selection
+      if (activeGroups.has(d+1)) { //accomodate for the index being offset by 1
+        activeGroups.delete(d+1); 
+      }
+      else { 
+        activeGroups.add(d+1); 
+      }
+      updateVisibility();
+      // optional: visually indicate active/inactive legend entry
+      d3.select(this).select("circle")
+        .attr("stroke", activeGroups.has(d+1) ? "none" : "#333")
+        .attr("stroke-width", activeGroups.has(d+1) ? 0 : 5);
+    });
+
+  legendItems.append("circle")
+    .attr("r", 6)
+    .attr("fill", color);
+
+  legendItems.append("text")
+    .attr("x", 12)
+    .attr("y", 4)
+    .style("font-size", "12px")
+    .text(d => `Group ${d}`);
   
 
   // Add a drag behavior.
@@ -101,12 +178,10 @@ function _chart(d3,data,invalidation)
    // Create a map from node ID to its neighbors
   const neighborMap = new Map();
   nodes.forEach(node => neighborMap.set(node.id, new Set()));
-  //console.log("neighborMap is ", neighborMap)
   links.forEach(link => {
     neighborMap.get(link.source.id || link.source).add(link.target.id || link.target);
     neighborMap.get(link.target.id || link.target).add(link.source.id || link.source);
   });
-  //console.log("links are ", links)
 
 
   
@@ -125,6 +200,10 @@ function _chart(d3,data,invalidation)
     labels
         .attr("x", function(d) { return d.x; })
         .attr("y", function(d) { return d.y; }); 
+    
+    linkLabels
+        .attr("x", d => (d.source.x + d.target.x) / 2)
+        .attr("y", d => (d.source.y + d.target.y) / 2);
   });
 
   // Reheat the simulation when drag starts, and fix the subject position.
@@ -141,24 +220,16 @@ function _chart(d3,data,invalidation)
   }
 
   function hoverNode(d){
-    //console.log("Hovering", d)
     // Get neighbors of this node
     const neighbors = neighborMap.get(d.id);
-    //console.log("neighbors are ", neighbors)
     node
-    .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2) //keep node and its neighbors hella opaque and fade out teh other ndoes
-    //.attr("r", n => neighbors.has(n.id) ? 14 : 10); //increase size of neighbors to 14
-    
+      .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2) //keep node and its neighbors hella opaque and fade out teh other ndoes
+  
     labels
-    .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2);
+      .attr("opacity", n => neighbors.has(n.id) || n.id === d.id ? 1 : 0.2);
 
-    // d3.select(this)
-    //   .attr("r", 16)
-    
     // Highlight connected links
     link
-      // .attr("stroke", l =>
-      //   (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? "#f00" : "#999")
       .attr("stroke-width", l =>
         (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 2.5 : 1)
       .attr("stroke-opacity", l =>
@@ -169,10 +240,8 @@ function _chart(d3,data,invalidation)
   function endHover(){
     //return size and opacity of all nodes and links to the original
     node
-      //.attr("r", 10)
       .attr("opacity", 1);
     link
-      .attr("stroke", "#999")
       .attr("stroke-width", 1)
       .attr("stroke-opacity", 1);
     labels
@@ -180,26 +249,6 @@ function _chart(d3,data,invalidation)
   }
 
   function listAllConnections(d){
-    // const nodeId = d.id;
-    // const neighbors = neighborMap.get(nodeId);
-    // if (!neighbors) {
-    //   console.log(`Node "${nodeId}" has no connections.`);
-    //   return;
-    // }
-    // // Convert Set to array and print
-    // //console.log(`Neighbors of ${nodeId}:`, Array.from(neighbors));
-    // console.log(`Neighbors of ${d.id}:`);
-    // Array.from(neighbors).forEach(nId => {
-    //   const neighborNode = nodes.find(n => n.id === nId);
-    //   if (neighborNode) {
-    //     const group = neighborNode.group;
-    //     const nodeColor = color(group);
-    //     console.log(`%c${nId}`, `color: ${nodeColor}; font-weight: bold`);
-    //   } else {
-    //     console.log(nId);  // fallback if not found
-    //   }
-    // })
-
     const nodeId = d.id;
     const neighbors = neighborMap.get(nodeId);
     const sidebar = document.getElementById("sidebar");
@@ -242,8 +291,6 @@ function _chart(d3,data,invalidation)
   // really matter since the target alpha is zero and the simulation will
   // stop naturally, but it’s a good practice.)
   invalidation.then(() => simulation.stop());
-
-  //return svg.node();
   try {
     return svg.node();
   } catch (err) {
