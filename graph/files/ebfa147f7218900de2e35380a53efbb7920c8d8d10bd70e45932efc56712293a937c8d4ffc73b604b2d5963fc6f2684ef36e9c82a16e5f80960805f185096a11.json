@@ -199,6 +199,42 @@
         {
             "id": "4PM - 11:59PM",
             "group": 5
+        },
+        { 
+            "id": "Cicada Spaced Out", 
+            "group": 6 
+        },
+        { 
+            "id": "Cicada Groove",     
+            "group": 6 
+        },
+        { 
+            "id": "Bat Spaced Out",   
+            "group": 6 
+        },
+        { 
+            "id": "Cicada Sparse",     
+            "group": 6 
+        },
+        { 
+            "id": "Bat Sparse",        
+            "group": 6 
+        },
+        { 
+            "id": "Blips Sparse",      
+            "group": 6 
+        },
+        { 
+            "id": "Blips Far",         
+            "group": 6 
+        },
+        { 
+            "id": "Blips Close",       
+            "group": 6 
+        },
+        { 
+            "id": "Blips Clean",      
+            "group": 6 
         }
     ],
     "links": [
@@ -1176,6 +1212,25 @@
             "source": "SERRA_20250503_221611.wav",
             "target": "4PM - 11:59PM",
             "value": 1
-        }
+        },
+        { "source": "SERRA_20250503_153307.wav", "target": "Cicada Spaced Out", "value": 1 },
+        { "source": "SERRA_20250503_153021.wav", "target": "Cicada Groove", "value": 1 },
+        { "source": "SERRA_20250503_153031.wav", "target": "Cicada Groove", "value": 1 },
+        { "source": "SERRA_20250503_154212.wav", "target": "Bat Spaced Out", "value": 1 },
+        { "source": "SERRA_20250503_154212.wav", "target": "Cicada Sparse",  "value": 1 },
+        { "source": "SERRA_20250503_162545.wav", "target": "Bat Spaced Out", "value": 1 },
+        { "source": "SERRA_20250503_162545.wav", "target": "Cicada Sparse",  "value": 1 },
+        { "source": "SERRA_20250503_170259.wav", "target": "Bat Sparse", "value": 1 },
+        { "source": "SERRA_20250503_171548.wav", "target": "Blips Sparse", "value": 1 },
+        { "source": "SERRA_20250503_174208.wav", "target": "Blips Sparse", "value": 1 },
+        { "source": "SERRA_20250503_174216.wav", "target": "Blips Far",    "value": 1 },
+        { "source": "SERRA_20250503_174350.wav", "target": "Blips Close",  "value": 1 },
+        { "source": "SERRA_20250503_174415.wav", "target": "Blips Sparse", "value": 1 },
+        { "source": "SERRA_20250503_174540.wav", "target": "Blips Sparse", "value": 1 },
+        { "source": "SERRA_20250503_174712.wav", "target": "Blips Close",  "value": 1 },
+        { "source": "SERRA_20250503_174712.wav", "target": "Blips Far",    "value": 1 },
+        { "source": "SERRA_20250503_174751.wav", "target": "Blips Close",  "value": 1 },
+        { "source": "SERRA_20250503_175042.wav", "target": "Blips Clean",  "value": 1 },
+        { "source": "SERRA_20250503_175113.wav", "target": "Blips Clean",  "value": 1 }
     ]
 }
